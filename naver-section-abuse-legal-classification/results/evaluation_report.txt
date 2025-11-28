@@ -1,0 +1,20 @@
+=== 모델 평가 리포트 ===
+
+
+baseline1
+--------------------------------------------------
+
+TRAIN Set:
+  Accuracy: 0.9978
+  Macro F1: 0.9770
+  Weighted F1: 0.9979
+
+VAL Set:
+  Accuracy: 0.9633
+  Macro F1: 0.4328
+  Weighted F1: 0.9495
+
+TEST Set:
+  Accuracy: 0.9633
+  Macro F1: 0.4328
+  Weighted F1: 0.9495
