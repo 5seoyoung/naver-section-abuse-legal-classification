@@ -24,6 +24,9 @@ seaborn
 # 통계 분석
 scipy
 
+# 클래스 불균형 대응
+imbalanced-learn
+
 # 진행 상황 표시
 tqdm
 

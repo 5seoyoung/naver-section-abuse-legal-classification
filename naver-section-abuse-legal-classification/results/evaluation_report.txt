@@ -18,3 +18,93 @@ TEST Set:
   Accuracy: 0.9633
   Macro F1: 0.4328
   Weighted F1: 0.9495
+
+baseline2
+--------------------------------------------------
+
+TRAIN Set:
+  Accuracy: 1.0000
+  Macro F1: 1.0000
+  Weighted F1: 1.0000
+
+VAL Set:
+  Accuracy: 0.9467
+  Macro F1: 0.2432
+  Weighted F1: 0.9305
+
+TEST Set:
+  Accuracy: 0.9500
+  Macro F1: 0.2436
+  Weighted F1: 0.9321
+
+baseline1_politics
+--------------------------------------------------
+
+TRAIN Set:
+  Accuracy: 1.0000
+  Macro F1: 1.0000
+  Weighted F1: 1.0000
+
+VAL Set:
+  Accuracy: 0.9400
+  Macro F1: 0.3422
+  Weighted F1: 0.9169
+
+TEST Set:
+  Accuracy: 0.9400
+  Macro F1: 0.3422
+  Weighted F1: 0.9169
+
+baseline1_society
+--------------------------------------------------
+
+TRAIN Set:
+  Accuracy: 1.0000
+  Macro F1: 1.0000
+  Weighted F1: 1.0000
+
+VAL Set:
+  Accuracy: 0.9600
+  Macro F1: 0.2449
+  Weighted F1: 0.9404
+
+TEST Set:
+  Accuracy: 0.9600
+  Macro F1: 0.2449
+  Weighted F1: 0.9404
+
+baseline1_entertainment
+--------------------------------------------------
+
+TRAIN Set:
+  Accuracy: 1.0000
+  Macro F1: 1.0000
+  Weighted F1: 1.0000
+
+VAL Set:
+  Accuracy: 0.9900
+  Macro F1: 0.4975
+  Weighted F1: 0.9850
+
+TEST Set:
+  Accuracy: 0.9900
+  Macro F1: 0.4975
+  Weighted F1: 0.9850
+
+baseline1_smote
+--------------------------------------------------
+
+TRAIN Set:
+  Accuracy: 1.0000
+  Macro F1: 1.0000
+  Weighted F1: 1.0000
+
+VAL Set:
+  Accuracy: 0.9600
+  Macro F1: 0.3699
+  Weighted F1: 0.9421
+
+TEST Set:
+  Accuracy: 0.9600
+  Macro F1: 0.3699
+  Weighted F1: 0.9421

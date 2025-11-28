@@ -9,6 +9,11 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils.class_weight import compute_class_weight
+
+try:
+    from imblearn.over_sampling import SMOTE
+except ImportError:
+    SMOTE = None
 import torch
 import torch.nn as nn
 from torch.optim import AdamW
@@ -77,7 +82,7 @@ class KoBERTClassifier(nn.Module):
 
 
 def train_baseline1_tfidf_lr(train_texts, train_labels, val_texts, val_labels, 
-                             test_texts, test_labels):
+                             test_texts, test_labels, resample_strategy='class_weight'):
     """
     Baseline 1: TF-IDF + Logistic Regression
     """
@@ -101,8 +106,15 @@ def train_baseline1_tfidf_lr(train_texts, train_labels, val_texts, val_labels,
     y_test = le.transform(test_labels)
     
     # 클래스 가중치 계산
-    class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
-    class_weight_dict = dict(enumerate(class_weights))
+    class_weight_dict = None
+    if resample_strategy == 'class_weight':
+        class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
+        class_weight_dict = dict(enumerate(class_weights))
+    elif resample_strategy == 'smote':
+        if SMOTE is None:
+            raise ImportError("SMOTE requested but imbalanced-learn is not installed.")
+        smote = SMOTE(random_state=42)
+        X_train, y_train = smote.fit_resample(X_train, y_train)
     
     # 모델 학습
     model = LogisticRegression(
@@ -176,15 +188,15 @@ def train_baseline2_kobert_svm(train_texts, train_labels, val_texts, val_labels,
     test_pred = model.predict(X_test)
     
     return {
-        'model': model,
+        'model_type': 'svm_linear',
         'label_encoder': le,
-        'extractor': extractor,
         'train_pred': train_pred,
         'val_pred': val_pred,
         'test_pred': test_pred,
         'y_train': y_train,
         'y_val': y_val,
-        'y_test': y_test
+        'y_test': y_test,
+        'feature_extractor': 'KoBERT [CLS]'
     }
 
 
@@ -316,15 +328,15 @@ def train_baseline3_kobert_finetune(train_texts, train_labels, val_texts, val_la
     test_pred_list = test_preds
     
     return {
-        'model': model,
+        'model_type': 'kobert_finetune',
         'label_encoder': le,
-        'tokenizer': tokenizer,
         'train_pred': np.array(train_pred_list),
         'val_pred': np.array(val_pred_list),
         'test_pred': np.array(test_pred_list),
         'y_train': y_train,
         'y_val': y_val,
-        'y_test': y_test
+        'y_test': y_test,
+        'saved_model_path': 'results/model/kobert_finetune_best.pt'
     }
 
 
@@ -333,6 +345,12 @@ def main():
     parser.add_argument('--model', type=str, required=True,
                        choices=['baseline1', 'baseline2', 'baseline3', 'all'],
                        help='Model to train')
+    parser.add_argument('--section', type=str, default=None,
+                       choices=['politics', 'society', 'entertainment'],
+                       help='Train using only this section data')
+    parser.add_argument('--resample_strategy', type=str, default='class_weight',
+                       choices=['none', 'class_weight', 'smote'],
+                       help='Strategy to handle class imbalance (baseline1 only)')
     parser.add_argument('--device', type=str, default=None,
                        help='Device to use (cuda or cpu)')
     parser.add_argument('--batch_size', type=int, default=16,
@@ -353,7 +371,25 @@ def main():
     
     # 데이터 로드
     df = load_labeled_comments()
-    train_df, val_df, test_df = split_data(df, test_size=0.2, val_size=0.2)
+    if args.section:
+        df = df[df['section'] == args.section].copy()
+        if df.empty:
+            raise ValueError(f"No data available for section {args.section}")
+        print(f"Filtering dataset to section '{args.section}' ({len(df)} rows)")
+
+    # Drop labels that are too rare to split (e.g., only 1 sample)
+    label_counts = df['label'].value_counts()
+    rare_labels = label_counts[label_counts < 2].index.tolist()
+    if rare_labels:
+        df = df[~df['label'].isin(rare_labels)].copy()
+        print(f"Dropping labels with <2 samples: {rare_labels}")
+        if df.empty:
+            raise ValueError("All samples were dropped due to rarity. Cannot train.")
+    stratify_col = 'label'
+    if df['label'].value_counts().min() < 2:
+        stratify_col = None
+        print("Warning: some classes have <2 samples. Disabling stratified split.")
+    train_df, val_df, test_df = split_data(df, test_size=0.2, val_size=0.2, stratify_col=stratify_col)
     
     print(f"Train: {len(train_df)}, Val: {len(val_df)}, Test: {len(test_df)}")
     
@@ -362,6 +398,14 @@ def main():
     
     # 모델 학습
     results = {}
+
+    def make_model_key(name: str) -> str:
+        key = name
+        if args.section:
+            key += f"_{args.section}"
+        if name.startswith('baseline1') and args.resample_strategy != 'class_weight':
+            key += f"_{args.resample_strategy}"
+        return key
     
     if args.model in ['baseline1', 'all']:
         result1 = train_baseline1_tfidf_lr(
@@ -370,9 +414,10 @@ def main():
             val_df['comment_text'].tolist(),
             val_df['label'].tolist(),
             test_df['comment_text'].tolist(),
-            test_df['label'].tolist()
+            test_df['label'].tolist(),
+            resample_strategy=args.resample_strategy
         )
-        results['baseline1'] = result1
+        results[make_model_key('baseline1')] = result1
     
     if args.model in ['baseline2', 'all']:
         result2 = train_baseline2_kobert_svm(
@@ -384,7 +429,7 @@ def main():
             test_df['label'].tolist(),
             device=device
         )
-        results['baseline2'] = result2
+        results[make_model_key('baseline2')] = result2
     
     if args.model in ['baseline3', 'all']:
         result3 = train_baseline3_kobert_finetune(
@@ -399,7 +444,7 @@ def main():
             epochs=args.epochs,
             lr=args.lr
         )
-        results['baseline3'] = result3
+        results[make_model_key('baseline3')] = result3
     
     # 모델 저장
     for model_name, result in results.items():
