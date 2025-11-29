@@ -16,11 +16,12 @@ data/raw/*
 data/processed/*
 data/samples/*
 
-# Models
-results/model/*
+# Results (전체 results 폴더 제외)
+results/*
 
-# Logs
-results/logs/*
+# Markdown files
+*.md
+!README.md
 
 # OS
 .DS_Store
